@@ -16,6 +16,13 @@
     body{
       margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans", Arial, "Apple Color Emoji","Segoe UI Emoji";
       background:var(--bg); color:var(--ink);
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#FFF8D6">
+    <!-- (iOS – lepszy wygląd po dodaniu do ekranu) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
     }
     header{
       position:sticky; top:0; z-index:10;
@@ -944,5 +951,13 @@
       if (el.btnExitBottom) el.btnExitBottom.addEventListener('click', ()=> show(el.home));
     });
   </script>
+  <script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
+  });
+}
+</script>
+
 </body>
 </html>
