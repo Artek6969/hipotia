@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kapibara Hipotia uczy tabliczki mnożenia!</title>
+  <style>
+    :root{
+      --bg:#FFF8D6; --card:#fff; --ink:#333; --muted:#666;
+      --accent:#4b7bec; --ok:#22a06b; --bad:#e94f37; --warn:#f5a623;
+      --blue:#1f6feb; --green:#0a8f63;
+      --radius:14px; --shadow:0 4px 16px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans", Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:var(--bg); color:var(--ink);
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.7));
+      backdrop-filter:saturate(1.2) blur(6px);
+      border-bottom:1px solid #eee;
+      padding:10px 16px; font-weight:700; font-size:20px; text-align:center;
+    }
+    header .brand{display:flex; align-items:center; justify-content:center; gap:10px; line-height:1}
+    header .brand img{height:80px; width:auto; border-radius:8px}
+    header .sub{display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:4px}
+    main{max-width:980px; margin:18px auto; padding:0 16px 56px}
+    .row{display:flex; gap:16px; flex-wrap:wrap}
+    .card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px}
+    .stage-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px}
+    .stage{
+      position:relative; padding:16px; border:2px solid transparent; cursor:pointer;
+      transition:.2s transform, .2s box-shadow, .2s border-color; min-height:120px;
+    }
+    .stage:hover{transform:translateY(-2px); box-shadow:0 6px 22px rgba(0,0,0,.12)}
+    .stage h3{margin:0 0 6px; font-size:20px}
+    .badge{display:inline-block; background:#f2f6ff; color:var(--accent); padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700}
+    .meta{margin-top:8px; font-size:12px; color:var(--muted)}
+    .lock{position:absolute; right:10px; top:10px; font-size:20px; opacity:.7}
+    .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+    .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px}
+    .toolbar .spacer{flex:1}
+    input[type="text"], input[type="number"]{font-size:18px; padding:10px 12px; border:1px solid #ddd; border-radius:10px; width:100%}
+    button{
+      appearance:none; border:none; border-radius:12px; padding:12px 14px;
+      font-weight:700; cursor:pointer; background:#141414; color:#fff; font-size:16px;
+      transition:.2s transform, .2s opacity, .2s box-shadow; box-shadow:0 4px 14px rgba(20,20,20,.15);
+    }
+    button.secondary{background:#fff; color:#111; border:1px solid #e5e5e5; box-shadow:none}
+    button.ghost{background:transparent; color:#111; border:1px dashed #cfcfcf; box-shadow:none}
+    button.bad{background:#e94f37; color:#fff !important}
+    button:disabled{opacity:.5; cursor:not-allowed}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid #eee; background:#fff; font-size:13px}
+    .headerbar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin:8px 0 16px}
+    .kpi{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .kpi .pill{background:#fff; border:1px solid #eee; border-radius:999px; padding:8px 12px; font-weight:700}
+    .problem{font-size:32px; font-weight:800; text-align:center; margin:12px 0}
+    .hint{background:#fffef2; border:1px solid #f1e7ad; border-radius:12px; padding:12px; margin:10px 0; font-size:16px}
+    .hint code{background:#fff; border:1px solid #eee; padding:2px 6px; border-radius:8px}
+    .feedback{min-height:28px; font-weight:800; text-align:center; margin-top:6px}
+    .feedback.ok{color:var(--ok)} .feedback.bad{color:var(--bad)}
+    .reasoning{background:#fff4c1; border:1px solid #f1d879; border-radius:14px; padding:14px 16px; margin-top:12px; font-size:20px}
+    /* Auto-fit dla długich treści w bloku rozumowania */
+    @media (min-width:900px){ .reasoning{max-height:calc(100vh - 220px); overflow:hidden} }
+    .summary{text-align:center}
+    .summary .score{font-size:42px; font-weight:900; margin:6px 0}
+    .summary .cup{font-size:52px; margin:8px 0}
+    .small{font-size:12px; color:var(--muted)}
+    .section-title{display:flex; align-items:center; gap:8px; font-weight:900; margin:4px 0 6px}
+    .section-title .emoji{font-size:22px}
+    .table{width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; box-shadow:var(--shadow)}
+    .table th, .table td{padding:12px; border-bottom:1px solid #eee; text-align:left}
+    .table th{background:#fafafa; font-size:14px}
+    .table tr:last-child td{border-bottom:0}
+    .notice{font-size:13px; color:var(--muted)}
+    @media (min-width:900px){ .flex{display:flex; gap:16px} .flex .grow{flex:1} .flex .side{width:360px} }
+
+    /* ⭐ Gwiazdki (nagrody) */
+    .stars{font-size:18px; letter-spacing:2px; margin:6px 0 2px; color:#f5a623}
+    .stars .empty{color:#e3e3e3}
+
+    /* Kolory wyróżnień liczb */
+    .blue{color:var(--blue)}
+    .green{color:var(--green)}
+
+    /* 🧭 Modal */
+    .modal{position:fixed; inset:0; background:rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; padding:16px; z-index:50}
+    .modal[hidden]{display:none}
+    .modal-card{background:#fff; border-radius:16px; box-shadow:0 12px 36px rgba(0,0,0,.2); max-width:560px; width:100%; padding:18px}
+    .modal-card h3{margin:0 0 10px; font-size:22px}
+    .modal-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:10px}
+    .option{border:1px solid #eee; border-radius:14px; padding:14px; text-align:center; background:#fafafa}
+    .option .title{font-weight:900; margin-bottom:6px}
+    .option small{display:block; color:#666}
+    .option.easy{background:#fffdf1}
+    .option.medium{background:#f6fbff}
+    .option.hard{background:#fff6f6}
+    .option button{width:100%; margin-top:10px}
+    .option.hard button{color:#fff !important}
+
+    /* Zakładki rankingu */
+    .tabs{display:flex; gap:8px; margin:8px 0 12px; flex-wrap:wrap}
+    .tab{background:#fff; color:#111; border:1px solid #e5e5e5; border-radius:999px; padding:8px 12px; font-weight:800; cursor:pointer}
+    .tab.active{background:#4b7bec; border-color:#4b7bec; color:#fff}
+
+    /* 🎊 Confetti */
+    #confetti{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:70}
+    .confetti{position:absolute; width:8px; height:14px; opacity:.95; will-change:transform, opacity}
+    @keyframes confetti-fall{to{transform:translate3d(var(--x),110vh,0) rotate(720deg); opacity:0}}
+
+    /* ↩︎ Wyjdź – lewy dolny róg tylko na ekranie etapu */
+    #view-stage .exit-bottom{position:fixed; left:16px; bottom:16px; z-index:60; box-shadow:var(--shadow)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="capybara.png.png" alt="Kapibara Hipotia" />
+      <span>Kapibara Hipotia uczy tabliczki mnożenia!</span>
+    </div>
+     </header>
+
+  <main>
+    <!-- Widok startowy -->
+    <section id="view-home" class="card">
+      <div class="toolbar">
+        <div style="min-width:260px; flex:1">
+          <label for="nickname" class="small">Twoja ksywka (do rankingu)</label>
+          <input id="nickname" type="text" placeholder="np. Ada, Kuba, Leon..." maxlength="18" />
+        </div>
+        <button id="btn-ranking" class="secondary">🏆 Ranking</button>
+        <button id="btn-settings" class="secondary">⚙️ Ustawienia</button>
+      </div>
+
+      <div class="stage-grid" id="stage-grid"></div>
+      <p class="notice" style="margin-top:10px">Tip: Etapy odblokowują się kolejno — musisz odpowiedź poprawnie przynajmniej 7 razy aby przejść dalej!</p>
+    </section>
+
+    <!-- Widok etapu -->
+    <section id="view-stage" class="card" hidden>
+      <div class="headerbar">
+        <div class="kpi">
+          <div class="pill" id="kpi-task">Zadanie 1/9 – Etap 1</div>
+          <div class="pill">⏱️ <span id="kpi-timer">30</span>s</div>
+          <div class="pill">🔄 Próby: <span id="kpi-tries">2</span>/2</div>
+          <div class="pill" id="kpi-mode">🧭 bez ściągi</div>
+        </div>
+        <div class="kpi">
+          <button id="btn-explain" class="secondary">📘 Przykład rozumowania</button>
+        </div>
+      </div>
+
+      <div class="flex">
+        <div class="grow">
+          <div class="problem"><span id="aVal">3</span> × <span id="bVal">2</span> = ?</div>
+          <div id="scaffold" class="hint" hidden></div>
+
+          <div class="row">
+            <div style="flex:1">
+              <label class="small" for="answer">Twoja odpowiedź</label>
+              <input id="answer" type="number" inputmode="numeric" />
+            </div>
+            <div style="display:flex; align-items:flex-end; gap:8px">
+              <button id="btn-check">Sprawdź</button>
+              <button id="btn-next" class="secondary" disabled>Następne ➜</button>
+            </div>
+          </div>
+
+          <div id="feedback" class="feedback"></div>
+        </div>
+
+        <aside class="side">
+          <div class="reasoning" id="reasoning"></div>
+        </aside>
+      </div>
+
+      <!-- Przeniesiony przycisk WYJDŹ na lewy dolny róg -->
+      <button id="btn-exit-bottom" class="ghost exit-bottom">↩︎ Wyjdź</button>
+    </section>
+
+    <!-- Podsumowanie etapu -->
+    <section id="view-summary" class="card" hidden>
+      <div class="summary">
+        <div class="section-title"><span class="emoji">🧮</span> Podsumowanie etapu <span id="sum-stage">1</span></div>
+        <div class="score"><span id="sum-pct">0</span>%</div>
+        <div class="cup" id="sum-cup">🥉</div>
+        <div>Poprawne: <b id="sum-correct">0</b>/9 • Czas: <b id="sum-time">0:00</b></div>
+        <div style="margin-top:8px">
+          <div class="chip">Najlepszy wynik: <b id="sum-best">—</b></div>
+          <div class="chip">Najszybciej: <b id="sum-fast">—</b></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button id="btn-back">↩︎ Wróć do etapów</button>
+          <button id="btn-again" class="secondary">↻ Spróbuj ponownie</button>
+        </div>
+        <p class="notice" style="margin-top:10px">Jeśli wynik &lt; 70%, następny etap pozostaje zablokowany.</p>
+      </div>
+    </section>
+
+    <!-- Ranking -->
+    <section id="view-ranking" class="card" hidden>
+      <div class="section-title"><span class="emoji">🏆</span> Ranking klasowy (offline)</div>
+      <p class="notice">Ranking jest przechowywany lokalnie w przeglądarce. Możesz go <b>eksportować</b> do pliku i <b>importować</b> u nauczyciela, aby scalić wyniki klasy.</p>
+      <div class="toolbar">
+        <button id="btn-export" class="secondary">⬇️ Eksportuj JSON</button>
+        <label class="chip" style="cursor:pointer">
+          ⬆️ Importuj JSON
+          <input id="import-file" type="file" accept="application/json" style="display:none">
+        </label>
+        <div class="spacer"></div>
+        <button id="btn-home" class="ghost">← Etapy</button>
+      </div>
+      <div class="tabs">
+        <button id="tab-easy" class="tab active">ŁATWY</button>
+        <button id="tab-medium" class="tab">ŚREDNI</button>
+        <button id="tab-hard" class="tab">TRUDNY</button>
+      </div>
+      <table class="table" id="tbl-leader">
+        <thead><tr><th>Miejsce</th><th>Gracz</th><th>Średni wynik</th><th>Ukończone etapy</th><th>Łączny najlepszy czas</th><th>Data aktualizacji</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Ustawienia -->
+    <section id="view-settings" class="card" hidden>
+      <div class="section-title"><span class="emoji">⚙️</span> Ustawienia</div>
+      <div class="row">
+        <div class="chip"><input id="snd-toggle" type="checkbox" checked style="margin-right:8px"> Dźwięki</div>
+        <button id="btn-reset" class="bad">🗑️ Resetuj postępy</button>
+        <div class="spacer"></div>
+        <button id="btn-home2" class="ghost">← Etapy</button>
+      </div>
+      <p class="notice">Dźwięki używają Web Audio i są aktywowane po pierwszej interakcji (wymóg mobilnych przeglądarek).</p>
+    </section>
+
+    <!-- Modal wyboru trudności -->
+    <div id="modal-diff" class="modal" hidden>
+      <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px">
+          <h3 id="modal-diff-title">Wybierz poziom trudności</h3>
+          <button id="modal-diff-close" class="ghost">✕</button>
+        </div>
+        <div class="modal-grid">
+          <div class="option easy">
+            <div class="title">ŁATWY</div>
+            <div>📘 Ściąga zawsze widoczna</div>
+            <small>⏱️ 30s na zadanie</small>
+            <div class="stars">★<span class="empty">☆</span><span class="empty">☆</span></div>
+            <button id="choose-easy">Zaczynam</button>
+          </div>
+          <div class="option medium">
+            <div class="title">ŚREDNI</div>
+            <div>📘 Ściąga przez 3 pierwsze</div>
+            <small>⏱️ 12s na zadanie</small>
+            <div class="stars">★★<span class="empty">☆</span></div>
+            <button id="choose-medium" class="secondary">Zaczynam</button>
+          </div>
+          <div class="option hard">
+            <div class="title">TRUDNY</div>
+            <div>🧭 Bez ściągi</div>
+            <small>⏱️ 7s na zadanie</small>
+            <div class="stars">★★★</div>
+            <button id="choose-hard" class="bad">Zaczynam</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal przegranej (koniec prób) -->
+    <div id="modal-lose" class="modal" hidden>
+      <div class="modal-card" style="text-align:center">
+        <div style="font-size:22px; font-weight:900; margin-bottom:8px">Skończyły się próby 😢</div>
+        <div class="notice" style="margin-bottom:12px">Spróbuj ponownie ten etap.</div>
+        <button id="lose-restart" class="bad">Zacznij od nowa</button>
+      </div>
+    </div>
+
+    <!-- Warstwa konfetti -->
+    <div id="confetti" aria-hidden="true"></div>
+  </main>
+
+  <script>
+    "use strict";
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- Stałe gry ---
+      const STAGE_ORDER = [2,3,10,4,6,5,8,9,7];
+      const TASKS_PER_STAGE = 9;
+      const TRIES_PER_STAGE = 2;
+
+      // Poziomy trudności
+      const DIFFICULTY = {
+        easy:   { label: 'ŁATWY',   timePerTask: 30, hintMode: 'always' },
+        medium: { label: 'ŚREDNI',  timePerTask: 12, hintMode: 'first3' },
+        hard:   { label: 'TRUDNY',  timePerTask: 7,  hintMode: 'none' }
+      };
+
+      // --- Elementy DOM ---
+      const el = {
+        home: byId('view-home'),
+        stage: byId('view-stage'),
+        summary: byId('view-summary'),
+        ranking: byId('view-ranking'),
+        settings: byId('view-settings'),
+        stageGrid: byId('stage-grid'),
+        diffModal: byId('modal-diff'),
+        diffTitle: byId('modal-diff-title'),
+        diffClose: byId('modal-diff-close'),
+        chooseEasy: byId('choose-easy'),
+        chooseMedium: byId('choose-medium'),
+        chooseHard: byId('choose-hard'),
+        nickname: byId('nickname'),
+        kpiTask: byId('kpi-task'),
+        kpiTimer: byId('kpi-timer'),
+        kpiTries: byId('kpi-tries'),
+        kpiMode: byId('kpi-mode'),
+        aVal: byId('aVal'), bVal: byId('bVal'),
+        scaffold: byId('scaffold'),
+        answer: byId('answer'),
+        btnCheck: byId('btn-check'),
+        btnNext: byId('btn-next'),
+        btnExitBottom: byId('btn-exit-bottom'),
+        btnExplain: byId('btn-explain'),
+        feedback: byId('feedback'),
+        reasoning: byId('reasoning'),
+        sumStage: byId('sum-stage'),
+        sumPct: byId('sum-pct'),
+        sumCup: byId('sum-cup'),
+        sumCorrect: byId('sum-correct'),
+        sumTime: byId('sum-time'),
+        sumBest: byId('sum-best'),
+        sumFast: byId('sum-fast'),
+        btnBack: byId('btn-back'),
+        btnAgain: byId('btn-again'),
+        btnRanking: byId('btn-ranking'),
+        btnSettings: byId('btn-settings'),
+        btnHome: byId('btn-home'),
+        btnHome2: byId('btn-home2'),
+        tblLeader: byId('tbl-leader').querySelector('tbody'),
+        tabEasy: byId('tab-easy'),
+        tabMedium: byId('tab-medium'),
+        tabHard: byId('tab-hard'),
+        btnExport: byId('btn-export'),
+        importFile: byId('import-file'),
+        sndToggle: byId('snd-toggle'),
+        btnReset: byId('btn-reset'),
+        loseModal: byId('modal-lose'),
+        btnLoseRestart: byId('lose-restart'),
+      };
+
+      // --- Storage helpers ---
+      const store = {
+        get(key, fallback){ try{ const v = localStorage.getItem(key); return v? JSON.parse(v): fallback; } catch { return fallback; } },
+        set(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+      };
+      const LS = { profile:'KH_profile_v1', progress:'KH_progress_v1', board:'KH_leaderboard_v1' };
+
+      const profile = store.get(LS.profile, { nickname:"", createdAt: Date.now() });
+      if (profile.nickname) el.nickname.value = profile.nickname;
+
+      const progress = store.get(LS.progress, bootstrapProgress());
+      normalizeProgress();
+      const leaderboard = store.get(LS.board, []);
+
+      // --- Dźwięki ---
+      const Sound = (() => {
+        let ctx=null, enabled=true;
+        function ensure(){ if(!ctx){ try{ ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch{} } }
+        function start(){ ensure(); if(ctx && ctx.state==='suspended') ctx.resume(); }
+        function tone(f=440, ms=150, type='sine', v=0.08){
+          if(!enabled) return; ensure(); if(!ctx) return;
+          const o=ctx.createOscillator(), g=ctx.createGain();
+          o.type=type; o.frequency.value=f; g.gain.value=0;
+          o.connect(g); g.connect(ctx.destination);
+          const t=ctx.currentTime;
+          g.gain.linearRampToValueAtTime(v, t+.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t+ms/1000);
+          o.start(t); o.stop(t+ms/1000+.02);
+        }
+        function seq(arr){ let t=0; arr.forEach(s=>{ setTimeout(()=>tone(s.f,s.ms,s.type||'sine',s.v||0.08), t); t += s.ms + (s.pause||20) }); }
+        return {
+          enable(v){ enabled=v; }, start,
+          correct(){ seq([{f:880,ms:120,type:'triangle'},{f:1175,ms:120,type:'triangle'}]); },
+          wrong(){ tone(210,220,'sawtooth',.09); },
+          tick(){ tone(600,60,'square',.05); },
+          timeup(){ seq([{f:200,ms:180,type:'square'},{f:140,ms:220,type:'square'}]); }
+        }
+      })();
+      el.sndToggle.checked = store.get('KH_snd_on_v1', true);
+      Sound.enable(el.sndToggle.checked);
+      el.sndToggle.addEventListener('change', ()=>{ Sound.enable(el.sndToggle.checked); store.set('KH_snd_on_v1', el.sndToggle.checked); });
+
+      // --- Router widoków ---
+      function show(view){
+        [el.home, el.stage, el.summary, el.ranking, el.settings].forEach(v => v.hidden = true);
+        view.hidden = false;
+        if (view === el.home) renderStages();
+        if (view === el.ranking) { updateTabUI(); renderRanking(); }
+      }
+
+      // --- Render siatki etapów ---
+      function renderStages(){
+        el.stageGrid.innerHTML = '';
+        STAGE_ORDER.forEach((mult, idx) => {
+          const s = progress.stages[idx] || {};
+          const unlocked = !!s.unlocked;
+          const best = s.bestScore ?? null;
+          const bestT = s.bestTimeSec ?? null;
+          const cup = best===100 ? '🥇' : best>=80 ? '🥈' : best>=70 ? '🥉' : '';
+          const maxDiff = s.maxDiff || 0;
+          const stars = '★'.repeat(maxDiff) + '<span class="empty">' + '☆'.repeat(3-maxDiff) + '</span>';
+          const card = document.createElement('div');
+          card.className = 'card stage';
+          card.tabIndex = 0; card.setAttribute('role','button');
+          card.addEventListener('click', ()=> unlocked ? showDifficulty(idx) : null);
+          card.innerHTML = `
+            <h3>Etap ${idx+1} — mnożenie ×${mult}</h3>
+            <div class="stars">${stars}</div>
+            <span class="badge">${cup || (unlocked ? '🎯 Gotowy do gry' : 'Ukończ poprzedni etap')}</span>
+            <div class="meta">${best!=null ? `Najlepszy: <b>${best}%</b>${bestT!=null?` • ${fmtTime(bestT)}`:''}` : `Brak wyniku — spróbuj!`}</div>
+            ${!unlocked ? `<div class="lock">🔒</div>` : ``}
+          `;
+          if (!unlocked){ card.style.borderColor='#f1e7ad'; card.style.background='#fffdf1'; }
+          el.stageGrid.appendChild(card);
+        });
+      }
+
+      // --- Stan gry / timer ---
+      let g=null, timerId=null;
+
+      function startStage(stageIndex, diffKey){
+        Sound.start();
+        const multiplier = STAGE_ORDER[stageIndex];
+        const diff = DIFFICULTY[diffKey] || DIFFICULTY.easy;
+        const tasks = makeTasks(multiplier, diff.hintMode);
+        g = { stageIndex, multiplier, tasks, i:0, correct:0, timeSpent:0,
+              timePerTask: diff.timePerTask, difficulty: diffKey, triesLeft: TRIES_PER_STAGE };
+        el.feedback.textContent = '';
+        el.btnNext.disabled = true;
+        el.answer.value = '';
+        el.scaffold.hidden = true;
+        el.reasoning.innerHTML = reasoningFor(multiplier);
+        fitReasoning();
+        show(el.stage);
+        renderTask();
+      }
+
+      function renderTask(){
+        const t = g.tasks[g.i];
+        el.kpiTask.textContent = `Zadanie ${g.i+1}/${TASKS_PER_STAGE} – Etap ${g.stageIndex+1}`;
+        el.kpiTries.textContent = g.triesLeft;
+        el.kpiMode.textContent = `🌟 ${DIFFICULTY[g.difficulty].label} • ` + (t.withHint ? '📘 ściąga' : '🧭 bez ściągi');
+        el.aVal.textContent = t.a;
+        el.bVal.textContent = g.multiplier;
+        el.answer.value = ''; el.answer.focus();
+        el.feedback.textContent = ''; el.feedback.className = 'feedback';
+
+        if (t.withHint){ el.scaffold.innerHTML = scaffoldFor(t.a, g.multiplier); el.scaffold.hidden = false; }
+        else el.scaffold.hidden = true;
+
+        clearInterval(timerId);
+        let remain = g.timePerTask;
+        el.kpiTimer.textContent = remain;
+        timerId = setInterval(()=>{
+          remain--;
+          if (remain<=5 && remain>0) Sound.tick();
+          el.kpiTimer.textContent = Math.max(remain,0);
+          if (remain<=0){
+            clearInterval(timerId);
+            Sound.timeup();
+            consumeTry();
+            if (g.triesLeft <= 0) return;
+            lockTask(false, t, true);
+          }
+        }, 1000);
+
+        el.btnCheck.disabled = false;
+        el.btnNext.disabled = true;
+
+        el.btnCheck.onclick = () => {
+          const val = Number(el.answer.value);
+          if (Number.isNaN(val) || el.answer.value.trim()===''){
+            el.feedback.textContent = 'Wpisz liczbę 🙂';
+            el.feedback.className = 'feedback warn';
+            return;
+          }
+          if (val === t.result){ Sound.correct(); g.correct++; lockTask(true, t, false); }
+          else {
+            Sound.wrong(); consumeTry();
+            if (g.triesLeft <= 0){
+              el.feedback.textContent = `Koniec prób. Poprawny wynik to ${t.result}.`;
+              el.feedback.className = 'feedback bad';
+              lockTask(false, t, false);
+            } else {
+              el.kpiTries.textContent = g.triesLeft;
+              el.feedback.textContent = `Niestety, spróbuj jeszcze raz. (Pozostało prób: ${g.triesLeft})`;
+              el.feedback.className = 'feedback bad';
+              el.answer.select();
+            }
+          }
+        };
+
+        el.btnNext.onclick = () => {
+          g.i++;
+          if (g.i >= TASKS_PER_STAGE) finishStage();
+          else renderTask();
+        };
+      }
+
+      function consumeTry(){
+        if (g.triesLeft > 0) g.triesLeft--;
+        el.kpiTries.textContent = g.triesLeft;
+        if (g.triesLeft <= 0){
+          clearInterval(timerId);
+          el.btnCheck.disabled = true;
+          el.btnNext.disabled = true;
+          showLose();
+        }
+      }
+
+      function lockTask(ok, t, timeUp){
+        clearInterval(timerId);
+        el.btnCheck.disabled = true;
+        el.btnNext.disabled = false;
+        el.feedback.textContent = ok ? 'Świetnie! ✅' : (timeUp ? 'Czas minął! ⏱️' : `Poprawny wynik to ${t.result}.`);
+        el.feedback.className = 'feedback ' + (ok?'ok':'bad');
+        const spent = g.timePerTask - Number(el.kpiTimer.textContent);
+        g.timeSpent += Math.max(0, spent);
+      }
+
+      function finishStage(){
+        const pct = Math.round((g.correct / TASKS_PER_STAGE) * 100);
+        const cup = pct===100 ? '🥇' : pct>=80 ? '🥈' : pct>=70 ? '🥉' : '—';
+
+        const s = progress.stages[g.stageIndex] || {};
+        const prevBest = s.bestScore ?? null;
+        const prevTime = s.bestTimeSec ?? null;
+
+        let newBest = prevBest;
+        let newFast = prevTime;
+        if (prevBest==null || pct > prevBest) newBest = pct;
+        if (prevTime==null || g.timeSpent < prevTime) newFast = g.timeSpent;
+
+        const prevMax = s.maxDiff || 0;
+        const diffVal = g.difficulty==='hard' ? 3 : g.difficulty==='medium' ? 2 : 1;
+        const newMax = Math.max(prevMax, diffVal);
+
+        progress.stages[g.stageIndex] = {
+          ...s,
+          unlocked: true,
+          bestScore: newBest,
+          bestTimeSec: newFast,
+          lastScore: pct,
+          lastTimeSec: g.timeSpent,
+          maxDiff: newMax
+        };
+
+        if (pct>=70 && g.stageIndex < STAGE_ORDER.length-1){
+          progress.stages[g.stageIndex+1] = progress.stages[g.stageIndex+1] || {};
+          progress.stages[g.stageIndex+1].unlocked = true;
+        }
+
+        store.set(LS.progress, progress);
+
+        if (prevMax < 3 && newMax === 3) burstConfetti();
+
+        const name = (el.nickname.value || 'Anon').slice(0,18);
+        if (name) upsertLeaderboard(name, progress);
+
+        el.sumStage.textContent = (g.stageIndex+1);
+        el.sumPct.textContent = pct;
+        el.sumCup.textContent = cup==='—' ? '' : cup;
+        el.sumCorrect.textContent = g.correct;
+        el.sumTime.textContent = fmtTime(g.timeSpent);
+        el.sumBest.textContent = newBest!=null ? `${newBest}%` : '—';
+        el.sumFast.textContent = newFast!=null ? fmtTime(newFast) : '—';
+        show(el.summary);
+
+        el.btnBack.onclick = () => show(el.home);
+        el.btnAgain.onclick = () => startStage(g.stageIndex, g.difficulty);
+      }
+
+      // --- Tworzenie zadań ---
+      function makeTasks(mult, hintMode){
+        const nums = Array.from({length:10}, (_,i)=>i+1);
+        shuffle(nums);
+        const chosen = nums.slice(0, TASKS_PER_STAGE);
+        return chosen.map((a, idx) => ({
+          a, result: a * mult,
+          withHint: hintMode==='always' ? true : hintMode==='none' ? false : idx < 3
+        }));
+      }
+
+      // --- Konfetti ---
+      function burstConfetti(count=140){
+        const root = byId('confetti'); if (!root) return;
+        root.innerHTML = '';
+        const colors = ['#f94144','#f3722c','#f8961e','#f9c74f','#90be6d','#43aa8b','#577590','#277da1'];
+        for (let i=0;i<count;i++){
+          const p = document.createElement('div');
+          p.className = 'confetti';
+          p.style.left = (Math.random()*100) + 'vw';
+          p.style.top = '-10vh';
+          p.style.background = colors[i % colors.length];
+          p.style.setProperty('--x', (Math.random()*40-20).toFixed(2)+'vw');
+          const dur = 1000 + Math.floor(Math.random()*1200);
+          p.style.animation = `confetti-fall ${dur}ms linear forwards`;
+          root.appendChild(p);
+        }
+        setTimeout(()=>{ root.innerHTML=''; }, 2600);
+      }
+
+      // --- Ranking (obliczenia) ---
+      function upsertLeaderboard(name, progress){
+        const stats = computeStats(progress);
+        const now = Date.now();
+        const idx = leaderboard.findIndex(r => r.name === name);
+        if (idx === -1) leaderboard.push({ name, updatedAt: now, stats });
+        else {
+          const cur = leaderboard[idx];
+          const mergedPerStage = { ...(cur.stats.perStage||{}) };
+          for (let i=0;i<STAGE_ORDER.length;i++){
+            const a = (cur.stats.perStage||{})[i] || {};
+            const b = (stats.perStage||{})[i] || {};
+            mergedPerStage[i] = {
+              bestScore: Math.max(a.bestScore||0, b.bestScore||0) || null,
+              bestTimeSec: Math.min(nonZero(a.bestTimeSec), nonZero(b.bestTimeSec)),
+              maxDiff: Math.max(a.maxDiff||0, b.maxDiff||0)
+            };
+            if (!isFinite(mergedPerStage[i].bestTimeSec)) mergedPerStage[i].bestTimeSec = null;
+          }
+          leaderboard[idx] = {
+            name,
+            updatedAt: now,
+            stats: {
+              avgPct: Math.max(cur.stats.avgPct, stats.avgPct),
+              completed: Math.max(cur.stats.completed, stats.completed),
+              totalBestTimeSec: Math.min(nonZero(cur.stats.totalBestTimeSec), nonZero(stats.totalBestTimeSec)),
+              perStage: mergedPerStage
+            }
+          };
+        }
+        store.set(LS.board, leaderboard);
+      }
+
+      function computeStats(progress){
+        let sumPct = 0, count = 0, sumTime = 0;
+        const perStage = {};
+        progress.stages.forEach((s, i) => {
+          if (!s) return;
+          if (s.bestScore!=null){ sumPct += s.bestScore; count++; }
+          if (s.bestTimeSec!=null) sumTime += s.bestTimeSec;
+          perStage[i] = { bestScore: s.bestScore ?? null, bestTimeSec: s.bestTimeSec ?? null, maxDiff: s.maxDiff ?? 0 };
+        });
+        return {
+          avgPct: count ? Math.round(sumPct/count) : 0,
+          completed: count,
+          totalBestTimeSec: sumTime || 0,
+          perStage
+        };
+      }
+      function nonZero(x){ return (x && x>0) ? x : Number.MAX_SAFE_INTEGER; }
+
+      // Ranking – filtr i sort
+      let rankMode = 'easy';
+      const DIFF_THRESHOLD = { easy:1, medium:2, hard:3 };
+
+      function deriveRankStats(record, threshold){
+        const ps = (record && record.stats && record.stats.perStage) ? record.stats.perStage : {};
+        let sumPct=0, count=0, sumTime=0;
+        for (let i=0;i<STAGE_ORDER.length;i++){
+          const st = ps[i] || {};
+          const maxDiff = st.maxDiff ?? 0;
+          if (maxDiff >= threshold && st.bestScore!=null && st.bestScore>=70){
+            count++;
+            sumPct += st.bestScore;
+            if (st.bestTimeSec!=null) sumTime += st.bestTimeSec;
+          }
+        }
+        return { avgPct: count? Math.round(sumPct/count):0, completed: count, totalBestTimeSec: sumTime||0 };
+      }
+
+      function renderRanking(){
+        const thr = DIFF_THRESHOLD[rankMode] || 1;
+        const rows = leaderboard.map(r => ({ name:r.name, updatedAt:r.updatedAt, ...deriveRankStats(r, thr) }));
+        rows.sort((a,b)=>{
+          const d1 = b.completed - a.completed; if (d1) return d1;
+          const d2 = b.avgPct - a.avgPct; if (d2) return d2;
+          return a.totalBestTimeSec - b.totalBestTimeSec;
+        });
+        el.tblLeader.innerHTML = '';
+        rows.slice(0,50).forEach((r,i)=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${i+1}</td>
+            <td>${escapeHtml(r.name)}</td>
+            <td><b>${r.avgPct}%</b></td>
+            <td>${r.completed}/9</td>
+            <td>${r.completed>0 ? fmtTime(r.totalBestTimeSec) : '—'}</td>
+            <td class="small">${new Date(r.updatedAt).toLocaleDateString()}</td>
+          `;
+          el.tblLeader.appendChild(tr);
+        });
+      }
+
+      function updateTabUI(){
+        el.tabEasy.classList.toggle('active', rankMode==='easy');
+        el.tabMedium.classList.toggle('active', rankMode==='medium');
+        el.tabHard.classList.toggle('active', rankMode==='hard');
+      }
+
+      // --- Import/eksport rankingu ---
+      el.btnExport.addEventListener('click', ()=>{
+        const blob = new Blob([JSON.stringify(leaderboard,null,2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download='ranking_kapibara.json'; a.click();
+        URL.revokeObjectURL(url);
+      });
+      el.importFile.addEventListener('change', (e)=>{
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          try{
+            const data = JSON.parse(reader.result);
+            if (!Array.isArray(data)) throw new Error('Zły format');
+            data.forEach(item=>{
+              if (!item || typeof item.name!=='string' || !item.stats) return;
+              const idx = leaderboard.findIndex(r=>r.name===item.name);
+              if (idx===-1) leaderboard.push(item);
+              else {
+                const cur = leaderboard[idx];
+                const mergedPerStage = { ...(cur.stats.perStage||{}) };
+                for (let i=0;i<STAGE_ORDER.length;i++){
+                  const a = (cur.stats.perStage||{})[i] || {};
+                  const b = (item.stats.perStage||{})[i] || {};
+                  mergedPerStage[i] = {
+                    bestScore: Math.max(a.bestScore||0, b.bestScore||0) || null,
+                    bestTimeSec: Math.min(nonZero(a.bestTimeSec), nonZero(b.bestTimeSec)),
+                    maxDiff: Math.max(a.maxDiff||0, b.maxDiff||0)
+                  };
+                  if (!isFinite(mergedPerStage[i].bestTimeSec)) mergedPerStage[i].bestTimeSec = null;
+                }
+                leaderboard[idx] = {
+                  name: item.name,
+                  updatedAt: Date.now(),
+                  stats: {
+                    avgPct: Math.max(cur.stats.avgPct, item.stats.avgPct||0),
+                    completed: Math.max(cur.stats.completed, item.stats.completed||0),
+                    totalBestTimeSec: Math.min(nonZero(cur.stats.totalBestTimeSec), nonZero(item.stats.totalBestTimeSec)),
+                    perStage: mergedPerStage
+                  }
+                };
+              }
+            });
+            store.set(LS.board, leaderboard);
+            renderRanking();
+            alert('Zaimportowano ranking ✅');
+          }catch{ alert('Nie udało się zaimportować pliku.'); }
+          e.target.value = '';
+        };
+        reader.readAsText(file);
+      });
+
+      // --- Modal wyboru trudności ---
+      let pendingStageIndex = null;
+      function showDifficulty(stageIndex){
+        pendingStageIndex = stageIndex;
+        el.diffTitle.textContent = `Etap ${stageIndex+1}: wybierz poziom`;
+        el.diffModal.hidden = false;
+      }
+      function hideDifficulty(){ el.diffModal.hidden = true; }
+      el.diffClose.addEventListener('click', hideDifficulty);
+      el.chooseEasy.addEventListener('click', ()=>{ if(pendingStageIndex!=null){ startStage(pendingStageIndex, 'easy'); hideDifficulty(); pendingStageIndex=null; } });
+      el.chooseMedium.addEventListener('click', ()=>{ if(pendingStageIndex!=null){ startStage(pendingStageIndex, 'medium'); hideDifficulty(); pendingStageIndex=null; } });
+      el.chooseHard.addEventListener('click', ()=>{ if(pendingStageIndex!=null){ startStage(pendingStageIndex, 'hard'); hideDifficulty(); pendingStageIndex=null; } });
+
+      // --- Modal przegranej ---
+      function showLose(){ el.loseModal.hidden = false; }
+      function hideLose(){ el.loseModal.hidden = true; }
+      el.btnLoseRestart.addEventListener('click', ()=>{ hideLose(); if (g) startStage(g.stageIndex, g.difficulty); });
+
+      // --- Nawigacja ---
+      el.btnRanking.addEventListener('click', ()=>{ rankMode='easy'; show(el.ranking); });
+      el.tabEasy.addEventListener('click', ()=>{ rankMode='easy'; updateTabUI(); renderRanking(); });
+      el.tabMedium.addEventListener('click', ()=>{ rankMode='medium'; updateTabUI(); renderRanking(); });
+      el.tabHard.addEventListener('click', ()=>{ rankMode='hard'; updateTabUI(); renderRanking(); });
+      el.btnSettings.addEventListener('click', ()=> show(el.settings));
+      el.btnHome.addEventListener('click', ()=> show(el.home));
+      el.btnHome2.addEventListener('click', ()=> show(el.home));
+      if (el.btnExitBottom) el.btnExitBottom.addEventListener('click', ()=> show(el.home));
+      el.btnReset.addEventListener('click', ()=>{
+        if (confirm('Na pewno usunąć postępy i ranking?')){
+          localStorage.removeItem(LS.progress);
+          localStorage.removeItem(LS.board);
+          const fresh = bootstrapProgress();
+          store.set(LS.progress, fresh);
+          leaderboard.length = 0;
+          progress.stages = fresh.stages;
+          renderStages();
+          alert('Wyczyszczono.');
+        }
+      });
+      el.btnExplain.addEventListener('click', ()=>{ el.reasoning.scrollIntoView({behavior:'smooth', block:'center'}); });
+      el.nickname.addEventListener('change', ()=> {
+        const nick = el.nickname.value.trim().slice(0,18);
+        store.set(LS.profile, { nickname:nick, createdAt: profile.createdAt || Date.now() });
+      });
+
+      // --- Start ---
+      renderStages(); show(el.home);
+
+      // --- Helpery ---
+      function fmtTime(s){ const m = Math.floor(s/60), sec = s%60; return `${m}:${String(sec).padStart(2,'0')}`; }
+      function shuffle(arr){ for (let i=arr.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } }
+      function byId(id){ return document.getElementById(id); }
+      function escapeHtml(str){ return String(str).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[m])); }
+      function bootstrapProgress(){ const base = { stages: Array.from({length: STAGE_ORDER.length}, ()=>({})) }; base.stages[0].unlocked = true; return base; }
+      function normalizeProgress(){
+        if (!progress.stages || !Array.isArray(progress.stages)){
+          const fresh = bootstrapProgress(); progress.stages = fresh.stages;
+        }
+        if (!progress.stages[0]) progress.stages[0] = {};
+        progress.stages[0].unlocked = true;
+        store.set(LS.progress, progress);
+      }
+
+      // --- Ściąga / Rozumowanie ---
+      function scaffoldFor(x, m){
+        switch(m){
+          case 2:  return `<div>Dodaj liczbę do niej samej:<br><code>${x} + ${x} = ?</code></div>`;
+          case 3:  return `<div>Dodaj X trzy razy:<br><code>${x} + ${x} + ${x} = ?</code></div>`;
+          case 10: return `<div>Dopisz zero z prawej :) <br><code></code></div>`;
+          case 4:  return `<div>Podwój, a potem znów podwój:<br><code>${x}×2 = ${x*2}</code> → <code>${x*2}×2 = ?</code></div>`;
+          case 6:  return `<div>Najpierw ×3, potem ×2:<br><code>${x}×3 = ${x*3}</code> → <code>${x*3}×2 = ?</code></div>`;
+          case 5:  return `<div>Najpierw ×10, potem ÷2:<br><code>${x}×10 = ${x*10}</code> → <code>${x*10} ÷ 2 = ?</code></div>`;
+          case 8:  return `<div>Podwój trzy razy:<br><code>${x}×2 = ${x*2}</code> → <code>${x*2}×2 = ${x*4}</code> → <code>${x*4}×2 = ?</code></div>`;
+          case 9:  return `<div>Najpierw ×10, potem odejmij X:<br><code>${x}×10 = ${x*10}</code> → <code>${x*10} − ${x} = ?</code></div>`;
+          case 7:  return `<div>Policz ×5 i ×2, potem dodaj:<br><code>${x}×5 = ${x*5}</code> + <code>${x}×2 = ${x*2}</code> → <code>… = ?</code></div>`;
+        }
+        return '';
+      }
+
+      function reasoningFor(m){
+        const s = REASONING[m];
+        return `
+       
+          <div class="section-title"><span class="emoji">📐</span> Matematycznie</div>
+          <div>${s.matematycznie}</div>
+          <div class="section-title"><span class="emoji">🎨</span> Obrazowo</div>
+          <div>${s.obrazowo}</div>
+          <div class="section-title"><span class="emoji">✏️</span> Wzór</div>
+          <div><code>${s.wzor}</code></div>
+          <div class="section-title"><span class="emoji">🔍</span> Przykład z rozumowaniem</div>
+          <div>${s.przyklad}</div>
+          <div class="section-title"><span class="emoji">🧠</span> Jak liczyć w głowie</div>
+          <div>${s.glowa}</div>
+          
+        `;
+      }
+
+      // Zmniejsz czcionkę w bloku rozumowania, jeśli treść się nie mieści
+      function fitReasoning(){
+        const box = el.reasoning; if (!box) return;
+        let size = 20; box.style.fontSize = size+'px';
+        // odczekaj klatkę aż DOM policzy wymiary
+        requestAnimationFrame(()=>{
+          const MIN = 16;
+          while (box.scrollHeight > box.clientHeight && size > MIN){
+            size -= 1; box.style.fontSize = size+'px';
+          }
+        });
+      }
+      window.addEventListener('resize', ()=>{ if(!el.stage.hidden) fitReasoning(); });
+
+      const REASONING = {
+        2: {
+          obrazowo:`Mnożenie przez 2 to jak mieć wszystko w dwóch kopiach. Np. 3 cukierki razy 2 — po 3 w każdej kieszeni — razem 6 🍬.`,
+          matematycznie:`Dodaj liczbę do niej samej.`,
+          wzor:`X × 2 = X + X = wynik`,
+          glowa:`Dodaj liczbę trzy razy do siebie.`,
+          przyklad:`3 × 2 = <b>3+3</b> = <span class="green">6</span>`
+        },
+        3: {
+          obrazowo:`Mnożenie przez <span class="blue">3</span> to tak, jakbyś miała coś w <b>trzech kopiach</b>.<br>Na przykład <span class="blue">5</span> kredek razy <span class="blue">3</span> — <span class="blue">5</span> w jednym piórniku, takie same <span class="blue">5</span> w drugim i jeszcze <span class="blue">5</span> w trzecim – razem <span class="green">15</span> kredek.`,
+          matematycznie:`Dodaj liczbę trzy razy do siebie.`,
+          wzor:`X × 3 = X + X + X = wynik`,
+          glowa:`Dodaj liczbę trzy razy do siebie.`,
+          przyklad:`5 × 3 = 5+5+5 = <b>15</b>`
+        },
+        10:{
+          obrazowo:`Wyobraź sobie, że masz <span class="blue">8</span> balonów i do każdego z nich dodajesz <span class="blue">9</span> kolegów, żeby było po <span class="blue">10</span> w grupie. Nagle balonów jest aż <span class="green">80</span>! 🎈`,
+          matematycznie:`Dopisz zero do liczby :)`,
+          wzor:`X × 10 = (X)0`,
+          glowa:` Dopisz zero.`,
+          przyklad:`6 × 10 = <b>60</b>`
+        },
+        4: {
+          obrazowo:` To jak zrobienie dwóch kopii, a potem z każdej kopii zrobienie kolejnej kopii – razem masz <span class="green">cztery</span> takie same zestawy.`,
+          matematycznie:`<span class="blue">4</span> to <b>2 × 2</b>. Najpierw podwajasz liczbę, a potem jeszcze raz podwajasz wynik.`,
+          wzor:`X × 4 = (X × 2) × 2`,
+          glowa:`1️⃣ liczba × 2, 2️⃣ wynik × 2.`,
+          przyklad:`6 × 4 → <b>6×2=12</b> → <b>12×2</b> = <span class="green">24</span>`
+        },
+        6: {
+          obrazowo:`To jak zrobić trzy kopie czegoś, a potem każdą skopiować jeszcze raz – razem <span class="green">sześć</span> zestawów.`,
+          matematycznie:`<span class="blue">6</span> to to samo co <b>3 × 2</b>. Najpierw mnożysz liczbę przez <span class="blue">3</span>, a potem podwajasz wynik. `,
+          wzor:`X × 6 = (X × 3) × 2`,
+          glowa:`1️⃣ liczba × 3, 2️⃣ wynik × 2.`,
+          przyklad:`5 × 6 → <b>5×3=15</b> → <b>15×2</b> = <span class="green">30</span>`
+        },
+        5: {
+          obrazowo:`To tak, jakbyś miała dziesięć kopii czegoś, ale oddała połowę – zostaje <span class="green">pięć</span> kopii.`,
+          matematycznie:`<span class="blue">5</span> to połowa z <span class="blue">10</span>. Możemy najpierw policzyć „razy 10”, a potem podzielić wynik na <span class="blue">2</span>. `,
+          wzor:`X × 5 = (X × 10) ÷ 2`,
+          glowa:`1️⃣ liczba × 10, 2️⃣ wynik ÷ 2.`,
+          przyklad:`8 × 5 → <b>80</b> ÷ 2 = <span class="green">40</span>`
+        },
+        8: {
+          obrazowo:`To jak mieć coś w dwóch kopiach, potem każdą skopiować na dwie, a na końcu znów na dwie – wychodzi <span class="green">osiem</span> zestawów.`,
+          matematycznie:`<span class="blue">8</span> to to samo co <b>2 × 2 × 2</b>. Najpierw podwajasz liczbę, potem podwajasz wynik, a na końcu podwajasz jeszcze raz.`,
+          wzor:`X × 8 = ((X × 2) × 2) × 2`,
+          glowa:`1️⃣ liczba × 2, 2️⃣ cyfra × 2, 3️⃣ wynik × 2.`,
+          przyklad:`7 × 8 → 7→14→28→<span class="green">56</span>`
+        },
+        9: {
+          obrazowo:`<span class="blue">9</span> to to samo co <b>10 − 1</b>. To jak mieć dziesięć kopii czegoś i jedną oddać – zostaje <span class="green">dziewięć</span> kopii.`,
+          matematycznie:`Najpierw policz „razy 10”, a potem odejmij tę samą liczbę..`,
+          wzor:`X × 9 = (X × 10) − X`,
+          glowa:`1️⃣ liczba × 10, 2️⃣ odejmij liczbę.`,
+          przyklad:`8 × 9 → <b>80 − 8</b> = <span class="green">72</span>`
+        },
+        7: {
+          obrazowo:`To jak mieć pięć kopii czegoś i dorobić jeszcze dwie – razem <span class="green">siedem</span> kopii.`,
+          matematycznie:`<span class="blue">7</span> to to samo co <b>5 + 2</b>. Najpierw policz <span class="blue">X × 5</span>, a potem dodaj <span class="blue">X × 2</span>. `,
+          wzor:`X × 7 = (X × 5) + (X × 2)`,
+          glowa:`1️⃣ liczba × 5, 2️⃣ liczba × 2, 3️⃣ dodaj wyniki.`,
+          przyklad:`6 × 7 → <b>30 + 12</b> = <span class="green">42</span>`
+        },
+      };
+
+      // Wyjście z etapu (nowy przycisk w lewym dolnym rogu)
+      if (el.btnExitBottom) el.btnExitBottom.addEventListener('click', ()=> show(el.home));
+    });
+  </script>
+</body>
+</html>
